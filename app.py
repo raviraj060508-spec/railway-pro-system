@@ -23,6 +23,16 @@ def init_db():
 
 init_db()
 
+# -------- SESSION --------
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "payment_done" not in st.session_state:
+    st.session_state.payment_done = False
+
+if "show_payment" not in st.session_state:
+    st.session_state.show_payment = False
+
 # -------- CORE LOGIC --------
 def generate_pnr():
     return random.randint(100000, 999999)
@@ -145,20 +155,17 @@ def create_pdf(ticket):
 
 # -------- PAYMENT --------
 def payment():
-    st.subheader("💳 Payment")
+    st.subheader("💳 Payment Gateway")
+
     card = st.text_input("Card Number")
     cvv = st.text_input("CVV", type="password")
 
-    if st.button("Pay"):
+    if st.button("Pay Now"):
         if card and cvv:
-            return True
+            st.session_state.payment_done = True
+            st.success("✅ Payment Successful")
         else:
-            st.error("Invalid Payment")
-    return False
-
-# -------- SESSION --------
-if "user" not in st.session_state:
-    st.session_state.user = None
+            st.error("Enter valid details")
 
 # -------- UI --------
 st.set_page_config(page_title="Railway Pro", layout="wide")
@@ -226,10 +233,23 @@ else:
 
     elif menu == "Book Ticket":
         name = st.text_input("Passenger Name")
+
+        if not name:
+            st.warning("Enter passenger name first")
+
         if st.button("Proceed to Payment"):
-            if payment():
-                pnr = book_ticket(name)
-                st.success(f"PNR: {pnr}" if pnr else "No Tickets")
+            st.session_state.show_payment = True
+
+        if st.session_state.show_payment:
+            payment()
+
+        if st.session_state.payment_done:
+            pnr = book_ticket(name)
+            st.success(f"🎟️ Ticket Booked! PNR: {pnr}")
+
+            # reset
+            st.session_state.payment_done = False
+            st.session_state.show_payment = False
 
     elif menu == "Cancel Ticket":
         pnr = st.number_input("PNR", step=1)
